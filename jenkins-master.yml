@@ -1,0 +1,51 @@
+apiVersion: extensions/v1beta1
+kind: Deployment
+metadata:
+  namespace: jenkins
+  name: jenkins-deployment
+spec:
+  replicas: 1
+  template:
+    metadata:
+      labels:
+        app: jenkins
+    spec:
+      containers:
+      - name: jenkins
+        image: jenkins:2.32.2
+        ports:
+        - containerPort: 8080
+        - containerPort: 50000
+        env:
+        - name: JAVA_OPTS
+          value: "-Xmx512m -Dhudson.slaves.NodeProvisioner.MARGIN=50 -Dhudson.slaves.NodeProvisioner.MARGIN0=0.85"
+        volumeMounts:
+        - mountPath: /var/jenkins_home
+          name: jenkins-volume
+      volumes:
+      - name: jenkins-volume
+        hostPath:
+      # directory location on host
+          path: /data
+      nodeSelector:
+       name: jenkins-master
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  namespace: jenkins
+  name: jenkins-svc
+spec:
+  type: LoadBalancer
+  selector:
+    app: jenkins
+  ports:
+  - name: "http"
+    port: 80
+    targetPort: 8080
+    protocol: "TCP"
+  - name: "slave"
+    port: 50000
+    targetPort: 50000
+    protocol: "TCP"
